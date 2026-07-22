@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-class CreateMaterias(BaseModel):
+class CreateMateria(BaseModel):
     nome: str
-    descricao: str = "Sem descrição"
-    cor: str = "Sem cor"
+    descricao: str | None = None
+    cor: str | None = None
