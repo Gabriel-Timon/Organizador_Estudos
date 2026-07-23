@@ -1,5 +1,9 @@
+import app.models
+from app.database import Base, engine
 from fastapi import FastAPI, HTTPException
 from app.schemas import CreateMateria
+
+Base.metadata.create_all(bind=engine)
 
 materias = []
 ultimo_id = 1
