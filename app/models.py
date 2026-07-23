@@ -5,9 +5,8 @@ from datetime import datetime
 
 class Materia(Base):
     __tablename__ = "materias"
-    nome: Mapped[str]
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nome: Mapped[str]
     descricao: Mapped[str | None]
     cor: Mapped[str | None]
     data_criacao: Mapped[datetime] = mapped_column(default=datetime.now)
-    

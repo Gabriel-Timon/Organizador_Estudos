@@ -1,7 +1,9 @@
 import app.models
-from app.database import Base, engine
-from fastapi import FastAPI, HTTPException
-from app.schemas import CreateMateria
+from app.database import Base, engine, get_db
+from app.models import Materia
+from app.schemas import CreateMateria, GetMateria
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import Session
 
 Base.metadata.create_all(bind=engine)
 
@@ -15,17 +17,17 @@ def root():
     return "Bem vindo(a) ao Organiador de Estudos"
 
 
-@app.post("/materias")
-def create_materia(materia: CreateMateria):
-    global ultimo_id
-    item = {
-        "id": ultimo_id,
-        "nome": materia.nome,
-        "descricao": materia.descricao,
-        "cor": materia.cor
-        }
-    ultimo_id += 1
-    materias.append(item)
+@app.post("/materias", response_model=GetMateria)
+def create_materia(materia: CreateMateria, db: Session = Depends(get_db)):
+    item = Materia(
+        nome=materia.nome,
+        descricao=materia.descricao,
+        cor=materia.cor
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    
     return item
 
 
