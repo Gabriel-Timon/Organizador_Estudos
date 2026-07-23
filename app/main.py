@@ -1,14 +1,11 @@
-import app.models
 from app.database import Base, engine, get_db
 from app.models import Materia
 from app.schemas import CreateMateria, GetMateria
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 Base.metadata.create_all(bind=engine)
-
-materias = []
-ultimo_id = 1
 
 app = FastAPI()
 
@@ -31,15 +28,42 @@ def create_materia(materia: CreateMateria, db: Session = Depends(get_db)):
     return item
 
 
-@app.get("/materias")
-def get_materias():
-    return materias
+@app.get("/materias", response_model=list[GetMateria])
+def get_materias(db: Session = Depends(get_db)):
+    query = select(Materia)
+    return db.execute(query).scalars().all()
 
 
-@app.get("/materias/{id}")
-def get_materiaByID(id: int):
-    for m in materias:
-        if m["id"] == id:
-            return m
-      
-    raise HTTPException(404, "O id da matéria não existe")
+@app.get("/materias/{id}", response_model=GetMateria)
+def get_materiaByID(id: int, db: Session = Depends(get_db)):
+    materia_db = db.get(Materia, id)
+    if materia_db is None:
+        raise HTTPException(404, "Matéria não encontrada.")
+
+    return materia_db    
+
+
+@app.put("/materias/{id}", response_model=GetMateria)
+def edit_materiaByID(id: int, materia_atualizada: CreateMateria, db: Session = Depends(get_db)):
+    materia_db = db.get(Materia, id)
+    if materia_db is None:
+        raise HTTPException(404, "Matéria não encontrada.")
+
+    materia_db.nome = materia_atualizada.nome
+    materia_db.descricao = materia_atualizada.descricao
+    materia_db.cor = materia_atualizada.cor
+
+    db.commit()
+    db.refresh(materia_db)
+
+    return materia_db
+
+
+@app.delete("/materias/{id}", status_code=204)
+def delete_materiaByID(id: int, db: Session = Depends(get_db)):
+    materia_db = db.get(Materia, id)
+    if materia_db is None:
+        raise HTTPException(404, "Matéria não encontrada.")
+
+    db.delete(materia_db)
+    db.commit()
