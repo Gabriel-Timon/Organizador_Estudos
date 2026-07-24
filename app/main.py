@@ -4,6 +4,8 @@ from app.schemas import CreateMateria, GetMateria, CreateTarefa, GetTarefa
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from typing import Literal
+from datetime import date
 
 Base.metadata.create_all(bind=engine)
 
@@ -83,3 +85,31 @@ def create_tarefa(tarefa: CreateTarefa, db: Session = Depends(get_db)):
     db.refresh(item)
 
     return item
+
+
+@app.get("/tarefas", response_model=list[GetTarefa])
+def get_tarefas(
+    materia_id: int | None = None, 
+    prioridade: Literal["baixa", "media", "alta"] | None = None,
+    status: Literal["pendente", "em_andamento", "concluida"] | None = None,
+    atrasadas: bool = False,
+    db: Session = Depends(get_db)
+):
+    
+    query = select(Tarefa)
+
+    if materia_id is not None:
+        query = query.where(Tarefa.materia_id == materia_id)
+
+    if prioridade is not None:
+        query = query.where(Tarefa.prioridade == prioridade)
+
+    if status is not None:
+        query = query.where(Tarefa.status == status)
+
+    if atrasadas:
+        hoje = date.today()
+        query = query.where(hoje > Tarefa.data_limite, Tarefa.status != "concluida")
+
+
+    return db.execute(query).scalars().all()
