@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, ForeignKey
 from datetime import datetime, date
 
@@ -10,6 +10,7 @@ class Materia(Base):
     descricao: Mapped[str | None]
     cor: Mapped[str | None]
     data_criacao: Mapped[datetime] = mapped_column(default=datetime.now)
+    tarefas: Mapped[list[Tarefa]] = relationship(back_populates="materia")
 
 
 class Tarefa(Base):
@@ -23,4 +24,4 @@ class Tarefa(Base):
     data_conclusao: Mapped[datetime | None]
     prioridade: Mapped[str]
     status: Mapped[str] = mapped_column(default="pendente")
-
+    materia: Mapped[Materia] = relationship(back_populates="tarefas")

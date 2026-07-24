@@ -1,6 +1,6 @@
 from app.database import Base, engine, get_db
-from app.models import Materia
-from app.schemas import CreateMateria, GetMateria
+from app.models import Materia, Tarefa
+from app.schemas import CreateMateria, GetMateria, CreateTarefa, GetTarefa
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -67,3 +67,19 @@ def delete_materiaByID(id: int, db: Session = Depends(get_db)):
 
     db.delete(materia_db)
     db.commit()
+
+
+@app.post("/tarefas", response_model=GetTarefa)
+def create_tarefa(tarefa: CreateTarefa, db: Session = Depends(get_db)):
+    busca = db.get(Materia, tarefa.materia_id)
+    if busca is None:
+        raise HTTPException(404, "Materia não encontrada.")
+
+    dados = tarefa.model_dump()
+    item = Tarefa(**dados)
+
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    return item
