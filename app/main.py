@@ -67,6 +67,9 @@ def delete_materiaByID(id: int, db: Session = Depends(get_db)):
     if materia_db is None:
         raise HTTPException(404, "Matéria não encontrada.")
 
+    if materia_db.tarefas:
+        raise HTTPException(409, f"Não foi possível excluir a matéria pois há uma ou várias tarefas vinculadas com {materia_db.nome}")
+
     db.delete(materia_db)
     db.commit()
 
@@ -174,3 +177,14 @@ def concluir_tarefa(id: int, db: Session = Depends(get_db)):
     db.refresh(tarefa_db)
 
     return tarefa_db
+
+
+@app.delete("/tarefas/{id}", status_code=204)
+def delete_tarefa(id: int, db: Session = Depends(get_db)):
+    tarefa_db = db.get(Tarefa, id)
+    if tarefa_db is None:
+        raise HTTPException(404, "Tarefa não encontrada.")
+
+    db.delete(tarefa_db)
+    db.commit()
+
