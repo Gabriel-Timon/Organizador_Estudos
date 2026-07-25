@@ -1,11 +1,11 @@
 from app.database import Base, engine, get_db
 from app.models import Materia, Tarefa
-from app.schemas import CreateMateria, GetMateria, CreateTarefa, GetTarefa
+from app.schemas import CreateMateria, GetMateria, CreateTarefa, GetTarefa, UpdateTarefa
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import Literal
-from datetime import date
+from datetime import datetime, date
 
 Base.metadata.create_all(bind=engine)
 
@@ -42,7 +42,7 @@ def get_materiaByID(id: int, db: Session = Depends(get_db)):
     if materia_db is None:
         raise HTTPException(404, "Matéria não encontrada.")
 
-    return materia_db    
+    return materia_db
 
 
 @app.put("/materias/{id}", response_model=GetMateria)
@@ -113,3 +113,64 @@ def get_tarefas(
 
 
     return db.execute(query).scalars().all()
+
+
+@app.get("/tarefas/{id}", response_model=GetTarefa)
+def get_tarefaByID(id: int, db: Session = Depends(get_db)):
+    tarefa_db = db.get(Tarefa, id)
+    if tarefa_db is None:
+        raise HTTPException(404, "Tarefa não encontrada.")
+
+    return tarefa_db
+
+
+@app.put("/tarefas/{id}", response_model=GetTarefa)
+def edit_tarefaByID(
+    id: int, 
+    tarefa_atualizada: UpdateTarefa,
+    db: Session = Depends(get_db)
+):
+
+    tarefa_db = db.get(Tarefa, id)
+    if tarefa_db is None:
+        raise HTTPException(404, "Tarefa não encontrada.")
+
+    materia_db = db.get(Materia, tarefa_atualizada.materia_id)
+    if materia_db is None:
+        raise HTTPException(404, "Matéria não encontrada")
+
+
+    status_anterior_tarefa = tarefa_db.status
+    if tarefa_atualizada.status == "concluida" and status_anterior_tarefa != "concluida":
+        tarefa_db.data_conclusao = datetime.now()
+
+    elif tarefa_atualizada.status != "concluida":
+        tarefa_db.data_conclusao = None
+
+    tarefa_db.titulo = tarefa_atualizada.titulo
+    tarefa_db.descricao = tarefa_atualizada.descricao
+    tarefa_db.materia_id = tarefa_atualizada.materia_id
+    tarefa_db.prioridade = tarefa_atualizada.prioridade
+    tarefa_db.data_limite = tarefa_atualizada.data_limite
+    tarefa_db.status = tarefa_atualizada.status
+
+    db.commit()
+    db.refresh(tarefa_db)
+
+    return tarefa_db
+
+
+@app.patch("/tarefas/{id}/concluir", response_model=GetTarefa)
+def concluir_tarefa(id: int, db: Session = Depends(get_db)):
+    tarefa_db = db.get(Tarefa, id)
+    if tarefa_db is None:
+        raise HTTPException(404, "A tarefa não foi encontrada.")
+    
+    if tarefa_db.status != "concluida":
+        tarefa_db.data_conclusao = datetime.now()
+        tarefa_db.status = "concluida"
+
+    db.commit()
+    db.refresh(tarefa_db)
+
+    return tarefa_db

@@ -52,3 +52,7 @@ class GetTarefa(BaseModel):
     status: Literal["pendente", "em_andamento", "concluida"]
     data_criacao: datetime
     data_conclusao: datetime | None
+
+
+class UpdateTarefa(CreateTarefa):
+    status: Literal["pendente", "em_andamento", "concluida"]
