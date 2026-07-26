@@ -11,6 +11,7 @@ class Materia(Base):
     cor: Mapped[str | None]
     data_criacao: Mapped[datetime] = mapped_column(default=datetime.now)
     tarefas: Mapped[list[Tarefa]] = relationship(back_populates="materia")
+    sessoes: Mapped[list[SessaoEstudo]] = relationship(back_populates="materia")
 
 
 class Tarefa(Base):
@@ -25,3 +26,13 @@ class Tarefa(Base):
     prioridade: Mapped[str]
     status: Mapped[str] = mapped_column(default="pendente")
     materia: Mapped[Materia] = relationship(back_populates="tarefas")
+
+
+class SessaoEstudo(Base):
+    __tablename__ = "sessoes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    materia_id: Mapped[int] = mapped_column(ForeignKey("materias.id"))
+    data: Mapped[date]
+    duracao_minutos: Mapped[int]
+    observacao: Mapped[str | None]
+    materia: Mapped[Materia] = relationship(back_populates="sessoes")

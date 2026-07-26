@@ -187,4 +187,3 @@ def delete_tarefa(id: int, db: Session = Depends(get_db)):
 
     db.delete(tarefa_db)
     db.commit()
-

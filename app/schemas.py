@@ -56,3 +56,24 @@ class GetTarefa(BaseModel):
 
 class UpdateTarefa(CreateTarefa):
     status: Literal["pendente", "em_andamento", "concluida"]
+
+
+class CreateSessaoEstudo(BaseModel):
+    materia_id: int
+    data: date
+    duracao_minutos: int
+    observacao: str | None = None
+
+    @field_validator("duracao_minutos")
+    @classmethod
+    def validar_duracao(cls, duracao: int):
+        if duracao <= 0 or duracao > 720:
+            raise ValueError("Duração inválida.")
+        return duracao
+
+    @field_validator("data")
+    @classmethod
+    def validar_data(cls, data: date):
+        if data > date.today():
+            raise ValueError("Data inválida.")
+        return data
