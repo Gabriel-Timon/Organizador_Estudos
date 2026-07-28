@@ -1,9 +1,17 @@
+from app.schemas import (
+    CreateMateria, 
+    GetMateria, 
+    CreateTarefa, 
+    GetTarefa, 
+    UpdateTarefa,
+    CreateSessaoEstudo,
+    GetSessaoEstudo
+    )
 from app.database import Base, engine, get_db
-from app.models import Materia, Tarefa
-from app.schemas import CreateMateria, GetMateria, CreateTarefa, GetTarefa, UpdateTarefa
+from app.models import Materia, Tarefa, SessaoEstudo
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from typing import Literal
 from datetime import datetime, date
 
@@ -69,6 +77,9 @@ def delete_materiaByID(id: int, db: Session = Depends(get_db)):
 
     if materia_db.tarefas:
         raise HTTPException(409, f"Não foi possível excluir a matéria pois há uma ou várias tarefas vinculadas com {materia_db.nome}")
+
+    if materia_db.sessoes:
+        raise HTTPException(409, f"Não foi possível excluir a matéria pois há uma ou várias sessões de estudo vinculadas com {materia_db.nome}")
 
     db.delete(materia_db)
     db.commit()
@@ -187,3 +198,62 @@ def delete_tarefa(id: int, db: Session = Depends(get_db)):
 
     db.delete(tarefa_db)
     db.commit()
+
+
+@app.post("/sessoes", response_model=GetSessaoEstudo)
+def create_sessao_estudo(sessao_estudo: CreateSessaoEstudo, db: Session = Depends(get_db)):
+    busca = db.get(Materia, sessao_estudo.materia_id)
+    if busca is None:
+        raise HTTPException(404, "Matéria não encontrada.")
+
+    dados = sessao_estudo.model_dump()
+    item = SessaoEstudo(**dados)
+
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    return item
+
+
+@app.get("/sessoes", response_model=list[GetSessaoEstudo])
+def get_sessoes_estudo(materia_id: int | None = None, db: Session = Depends(get_db)):
+    query = select(SessaoEstudo)
+
+    if materia_id is not None:
+        query = query.where(SessaoEstudo.materia_id == materia_id)
+
+    return db.execute(query).scalars().all()
+
+
+@app.delete("/sessoes/{id}", status_code=204)
+def delete_sessao(id: int, db: Session = Depends(get_db)):
+    sessao_estudo = db.get(SessaoEstudo, id)
+    if sessao_estudo is None:
+        raise HTTPException(404, "Sessão não encontrada.")
+
+    db.delete(sessao_estudo)
+    db.commit()
+
+
+@app.get("/relatorios/resumo")
+def tempo_total_estudado(db: Session = Depends(get_db)):
+    query_duracao_minutos = select(func.sum(SessaoEstudo.duracao_minutos))
+    query_tarefas_concluidas = select(func.count(Tarefa.id)).where(Tarefa.status == "concluida")
+    query_tarefas_pendentes = select(func.count(Tarefa.id)).where(Tarefa.status != "concluida")
+    query_tarefas_atrasadas = select(func.count(Tarefa.id)).where(Tarefa.status != "concluida", Tarefa.data_limite < date.today())
+
+    total_minutos = db.scalar(query_duracao_minutos)
+    tarefas_concluidas = db.scalar(query_tarefas_concluidas)
+    tarefas_pendentes = db.scalar(query_tarefas_pendentes)
+    tarefas_atrasadas = db.scalar(query_tarefas_atrasadas)
+
+    if total_minutos is None:
+        total_minutos = 0
+
+    return {
+        "tarefas_concluidas": tarefas_concluidas,
+        "tarefas_pendentes": tarefas_pendentes,
+        "tarefas_atrasadas": tarefas_atrasadas,
+        "total_estudado_minutos": total_minutos,
+        }

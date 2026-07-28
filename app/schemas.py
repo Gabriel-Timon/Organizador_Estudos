@@ -77,3 +77,13 @@ class CreateSessaoEstudo(BaseModel):
         if data > date.today():
             raise ValueError("Data inválida.")
         return data
+
+
+class GetSessaoEstudo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    materia_id: int
+    data: date
+    duracao_minutos: int
+    observacao: str | None
