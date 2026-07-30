@@ -87,3 +87,22 @@ class GetSessaoEstudo(BaseModel):
     data: date
     duracao_minutos: int
     observacao: str | None
+
+
+class GetResumoRelatorio(BaseModel):
+    tarefas_concluidas: int
+    tarefas_pendentes: int
+    tarefas_atrasadas: int
+    materia_mais_estudada: str | None
+    total_estudado_minutos: int
+    media_diaria_ultimos_sete_dias: float
+
+
+class GetTempoPorMateria(BaseModel):
+    materia: str
+    total_minutos: int
+
+
+class GetEstudoPorDia(BaseModel):
+    data: date
+    total_minutos: int

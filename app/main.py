@@ -5,7 +5,10 @@ from app.schemas import (
     GetTarefa, 
     UpdateTarefa,
     CreateSessaoEstudo,
-    GetSessaoEstudo
+    GetSessaoEstudo,
+    GetResumoRelatorio,
+    GetEstudoPorDia,
+    GetTempoPorMateria
     )
 from app.database import Base, engine, get_db
 from app.models import Materia, Tarefa, SessaoEstudo
@@ -13,7 +16,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from typing import Literal
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 Base.metadata.create_all(bind=engine)
 
@@ -236,24 +239,98 @@ def delete_sessao(id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
-@app.get("/relatorios/resumo")
+@app.get("/relatorios/resumo", response_model=GetResumoRelatorio)
 def tempo_total_estudado(db: Session = Depends(get_db)):
+    data_inicial = date.today() - timedelta(days=6)
+
+    total_por_materia = func.sum(SessaoEstudo.duracao_minutos).label("total_minutos")
+
     query_duracao_minutos = select(func.sum(SessaoEstudo.duracao_minutos))
     query_tarefas_concluidas = select(func.count(Tarefa.id)).where(Tarefa.status == "concluida")
     query_tarefas_pendentes = select(func.count(Tarefa.id)).where(Tarefa.status != "concluida")
     query_tarefas_atrasadas = select(func.count(Tarefa.id)).where(Tarefa.status != "concluida", Tarefa.data_limite < date.today())
+    query_materia_mais_estudada = select(Materia.nome, total_por_materia).join(SessaoEstudo, SessaoEstudo.materia_id == Materia.id).group_by(Materia.id, Materia.nome).order_by(total_por_materia.desc()).limit(1)
+    query_soma_sete_dias = select(
+        func.sum(SessaoEstudo.duracao_minutos)
+    ).where(
+        data_inicial <= SessaoEstudo.data
+    )
 
+    
     total_minutos = db.scalar(query_duracao_minutos)
     tarefas_concluidas = db.scalar(query_tarefas_concluidas)
     tarefas_pendentes = db.scalar(query_tarefas_pendentes)
     tarefas_atrasadas = db.scalar(query_tarefas_atrasadas)
+    soma_sete_dias = db.scalar(query_soma_sete_dias)
+    resultado = db.execute(query_materia_mais_estudada).first()
 
     if total_minutos is None:
         total_minutos = 0
+
+    if resultado is None:
+        materia_mais_estudada = None
+    else:
+        materia_mais_estudada = resultado.nome
+
+    if soma_sete_dias is None:
+        soma_sete_dias = 0
 
     return {
         "tarefas_concluidas": tarefas_concluidas,
         "tarefas_pendentes": tarefas_pendentes,
         "tarefas_atrasadas": tarefas_atrasadas,
+        "materia_mais_estudada": materia_mais_estudada,
         "total_estudado_minutos": total_minutos,
+        "media_diaria_ultimos_sete_dias": round(soma_sete_dias / 7, 1)
         }
+
+
+@app.get("/relatorios/tempo-por-materia", response_model=list[GetTempoPorMateria])
+def tempo_por_materia(db: Session = Depends(get_db)):
+    query = select(
+        Materia.nome,
+        func.sum(SessaoEstudo.duracao_minutos).label("total_minutos")
+    ).join(
+        SessaoEstudo,
+        SessaoEstudo.materia_id == Materia.id
+    ).group_by(
+        Materia.id,
+        Materia.nome
+    )
+
+    resultados = db.execute(query).all()
+
+    return [
+        {
+            "materia": linha.nome,
+            "total_minutos": linha.total_minutos
+        }
+        for linha in resultados
+    ]
+
+
+@app.get("/relatorios/ultimos-7-dias", response_model=list[GetEstudoPorDia])
+def ultimos_sete_dias(db: Session = Depends(get_db)):
+    data_inicial = date.today() - timedelta(days=6)
+    query = select(
+        SessaoEstudo.data,
+        func.sum(SessaoEstudo.duracao_minutos).label("total_minutos")
+    ).where(
+        SessaoEstudo.data >= data_inicial
+    ).group_by(
+        SessaoEstudo.data
+    ).order_by(
+        SessaoEstudo.data
+    )
+
+    resultados = db.execute(query).all()
+
+    return [
+        {
+            "data": linha.data,
+            "total_minutos": linha.total_minutos
+        }
+        for linha in resultados
+    ]
+
+
