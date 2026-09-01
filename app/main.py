@@ -24,7 +24,7 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return "Bem vindo(a) ao Organiador de Estudos"
+    return {"mensagem": "Bem vindo(a) ao Organizador de Estudos"}
 
 
 @app.post("/materias", response_model=GetMateria)
