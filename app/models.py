@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, ForeignKey
