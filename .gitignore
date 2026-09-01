@@ -1,5 +1,47 @@
-*__pycache__
-*venv
-*tmp
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Type checking and lint caches
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Local databases and temporary files
 *.db
-*.agents
+*.db-*
+*.sqlite
+*.sqlite3
+tmp/
+.tmp/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.vscode/
+.idea/
+.agents/
+.codex/
+.DS_Store
+Thumbs.db
